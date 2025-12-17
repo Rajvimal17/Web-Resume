@@ -13,17 +13,24 @@ interface ResumeProps {
 
 export const Resume = forwardRef<HTMLDivElement, ResumeProps>(({ data }, ref) => {
   return (
-    <div 
+    <article 
       ref={ref} 
       className="bg-white text-slate-800 w-full max-w-[210mm] min-h-[297mm] mx-auto shadow-2xl print:shadow-none print:w-full print:max-w-none p-10 md:p-12 relative overflow-hidden font-sans"
     >
+      {/* ATS / No-JS Fallback Message */}
+      <div className="no-print hidden print:block mb-4 text-xs text-slate-500 italic border-b pb-2">
+         Not seeing interactive features? That's by design. This version is optimized for ATS and printing. 
+         Visit <a href="https://rajvimal.com" className="text-blue-600 underline">rajvimal.com</a> for the full experience.
+      </div>
+
       {/* Print Specific Overrides */}
       <style>{`
         @media print {
-          @page { margin: 0.5cm; size: auto; }
+          @page { margin: 1cm; size: auto; }
           body { -webkit-print-color-adjust: exact; }
           .print-break-avoid { break-inside: avoid; page-break-inside: avoid; }
           a { text-decoration: none; color: inherit; }
+          .no-print-element { display: none !important; }
         }
       `}</style>
 
@@ -38,12 +45,12 @@ export const Resume = forwardRef<HTMLDivElement, ResumeProps>(({ data }, ref) =>
               {data.title}
             </h2>
           </div>
-          <div className="text-right text-xs md:text-sm text-slate-600 leading-relaxed">
+          <address className="text-right text-xs md:text-sm text-slate-600 leading-relaxed not-italic">
              <div className="flex items-center justify-end gap-1.5">
-                {data.contact.email} <Mail size={12} />
+                <a href={`mailto:${data.contact.email}`}>{data.contact.email}</a> <Mail size={12} />
              </div>
              <div className="flex items-center justify-end gap-1.5">
-                {data.contact.phone} <Phone size={12} />
+                <a href={`tel:${data.contact.phone}`}>{data.contact.phone}</a> <Phone size={12} />
              </div>
              <div className="flex items-center justify-end gap-1.5">
                 {data.contact.location} <MapPin size={12} />
@@ -53,7 +60,7 @@ export const Resume = forwardRef<HTMLDivElement, ResumeProps>(({ data }, ref) =>
                   {data.contact.linkedin}
                 </a> <Linkedin size={12} />
              </div>
-          </div>
+          </address>
         </div>
       </header>
 
@@ -88,11 +95,11 @@ export const Resume = forwardRef<HTMLDivElement, ResumeProps>(({ data }, ref) =>
         </h3>
         <div className="space-y-6">
           {data.experience?.map((exp, i) => (
-            <div key={i} className="print-break-avoid relative pl-4 border-l-2 border-slate-200">
-              <div className="flex justify-between items-baseline mb-1">
+            <article key={i} className="print-break-avoid relative pl-4 border-l-2 border-slate-200">
+              <header className="flex justify-between items-baseline mb-1">
                 <h4 className="font-bold text-slate-900 text-base">{exp.role}</h4>
-                <span className="text-xs font-bold text-slate-500 whitespace-nowrap">{exp.startDate} – {exp.endDate}</span>
-              </div>
+                <time className="text-xs font-bold text-slate-500 whitespace-nowrap">{exp.startDate} – {exp.endDate}</time>
+              </header>
               <div className="text-sm font-semibold text-blue-700 mb-2">
                 {exp.company} <span className="text-slate-400 font-normal">| {exp.location}</span>
               </div>
@@ -109,7 +116,7 @@ export const Resume = forwardRef<HTMLDivElement, ResumeProps>(({ data }, ref) =>
                   </li>
                 ))}
               </ul>
-            </div>
+            </article>
           ))}
         </div>
       </section>
@@ -120,11 +127,11 @@ export const Resume = forwardRef<HTMLDivElement, ResumeProps>(({ data }, ref) =>
           <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 mb-3 border-b-2 border-slate-800 pb-1">
             Education
           </h3>
-          <div>
+          <article>
             <div className="font-bold text-slate-900 text-sm">{data.education.degree}</div>
             <div className="text-sm text-slate-700">{data.education.institution}</div>
-            <div className="text-xs text-slate-500 mt-1">{data.education.year}</div>
-          </div>
+            <time className="text-xs text-slate-500 mt-1">{data.education.year}</time>
+          </article>
         </section>
 
         {/* --- CORE COMPETENCIES --- */}
@@ -136,7 +143,9 @@ export const Resume = forwardRef<HTMLDivElement, ResumeProps>(({ data }, ref) =>
              {data.skillCategories?.map((cat, i) => (
                <div key={i} className="text-sm flex flex-col sm:flex-row sm:gap-4">
                   <span className="font-bold text-slate-800 w-24 flex-shrink-0 text-xs uppercase tracking-wide pt-0.5">{cat.name}:</span>
-                  <span className="text-slate-700 flex-1">{cat.items.join(", ")}</span>
+                  <span className="text-slate-700 flex-1">
+                    {cat.items.map(item => item.name).join(", ")}
+                  </span>
                </div>
              ))}
              <div className="text-sm flex flex-col sm:flex-row sm:gap-4 mt-2 pt-2 border-t border-dashed border-slate-200">
@@ -147,7 +156,7 @@ export const Resume = forwardRef<HTMLDivElement, ResumeProps>(({ data }, ref) =>
         </section>
       </div>
       
-    </div>
+    </article>
   );
 });
 

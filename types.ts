@@ -33,9 +33,29 @@ export interface ImpactMetric {
   image?: string;   // New: Background visual
 }
 
+export interface SkillItem {
+  name: string;
+  useCase: string;
+  example: string;
+}
+
 export interface SkillCategory {
   name: string;
-  items: string[];
+  items: SkillItem[];
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string; // Emoji or Lucide icon name
+  color: string;
+}
+
+export interface LatestUpdate {
+  date: string;
+  text: string;
+  type: 'achievement' | 'role' | 'skill';
 }
 
 export interface ResumeData {
@@ -56,6 +76,9 @@ export interface ResumeData {
   };
   tools: string[];
   languages: string[];
+  badges: Badge[]; // New
+  latestUpdates: LatestUpdate[]; // New
+  emergingSkills: string[]; // New
 }
 
 export interface AiFeedbackResponse {

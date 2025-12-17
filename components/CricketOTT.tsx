@@ -1,461 +1,759 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ResumeData, Experience, Project } from '../types';
 import { MatchDetailModal } from './MatchDetailModal';
+import { ContactForm } from './ContactForm';
+import { SkillCard } from './SkillCard';
 import { ScrollStadium } from './ScrollStadium';
-import { Play, ChevronRight, Star, MonitorPlay, Zap, Activity, Briefcase, Trophy, TrendingUp, BarChart3, Shield, Target, Linkedin, Mail, Phone, MapPin, Twitter } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { TutorialModal } from './TutorialModal';
+import { IntroSequence } from './IntroSequence';
+import { InfoTooltip } from './InfoTooltip';
+import { QuickStatsCard, BadgeSection, UpdatesTimeline } from './GamificationWidgets'; // Imported new widgets
+import { Play, Trophy, Shield, Mail, Zap, ChevronRight, TrendingUp, Monitor, Gamepad2, Award, Target, BarChart2, Users, Brain, ChevronDown, Star, Activity, Clock, Zap as ZapIcon, Layout, ArrowUp, Share2, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { playHoverSound, playClickSound } from '../utils/audio';
 
 interface Props {
   data: ResumeData;
   onSwitchView: () => void;
+  onShare: () => void;
 }
 
-export const CricketOTT: React.FC<Props> = ({ data, onSwitchView }) => {
+type GameMode = 'QUICK_PLAY' | 'TEST' | 'ODI' | 'T20';
+
+export const CricketOTT: React.FC<Props> = ({ data, onSwitchView, onShare }) => {
   const [activeItem, setActiveItem] = useState<Experience | Project | null>(null);
   const [activeType, setActiveType] = useState<'experience' | 'project' | null>(null);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [gameMode, setGameMode] = useState<GameMode>('QUICK_PLAY');
+  const [mounted, setMounted] = useState(false);
+  
+  // Mobile UI States
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  
+  // Intro State
+  const [introComplete, setIntroComplete] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Check if intro has been seen in this session
+    const hasSeenIntro = sessionStorage.getItem('intro_seen_v1');
+    if (hasSeenIntro) {
+      setIntroComplete(true);
+    }
+
+    // Scroll Listener for Sticky Elements
+    const handleScroll = () => {
+      setShowStickyHeader(window.scrollY > 200);
+      setShowBackToTop(window.scrollY > 500);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleIntroFinish = () => {
+    setIntroComplete(true);
+    sessionStorage.setItem('intro_seen_v1', 'true');
+  };
 
   const handleOpenDetail = (item: Experience | Project, type: 'experience' | 'project') => {
     setActiveItem(item);
     setActiveType(type);
   };
 
-  // Scroll with offset to account for fixed navbar
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const offset = 100; // Adjusted offset
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = element.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+      element.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#0f1014] text-white font-sans selection:bg-blue-600 selection:text-white pb-0 overflow-x-hidden relative">
-      
-      {/* --- INTERACTIVE BACKGROUND --- */}
-      <ScrollStadium />
+  // --- MODE FILTERING LOGIC ---
+  const getFilteredExperience = () => {
+    switch (gameMode) {
+      case 'TEST':
+        return data.experience.filter(e => 
+          e.company.includes('InfoEdge') || 
+          e.company.includes('Affinity')
+        );
+      case 'ODI':
+        return data.experience.filter(e => 
+          e.company.includes('Leverage') || 
+          e.company.includes('Tekin') ||
+          e.company.includes('Live Cities')
+        );
+      case 'T20':
+        return data.experience.filter(e => 
+          e.company.includes("BYJU")
+        );
+      default:
+        return data.experience;
+    }
+  };
 
-      {/* Navbar */}
-      <nav className="fixed top-0 w-full z-50 bg-gradient-to-b from-[#0f1014] via-[#0f1014]/95 to-transparent px-4 md:px-12 py-4 flex items-center justify-between transition-all duration-300">
-         <div className="flex items-center gap-8">
-            <div 
-               className="flex flex-col leading-none cursor-pointer group" 
-               onClick={() => window.scrollTo(0,0)}
-               onMouseEnter={playHoverSound}
+  const filteredExperience = getFilteredExperience();
+
+  // Scout Report Text based on Mode
+  const getScoutReport = () => {
+    switch (gameMode) {
+      case 'TEST':
+        return {
+          title: "The Test Specialist",
+          subtitle: "Strategy • Architecture • Long Innings",
+          desc: "Raj excels in building long-term SEO architecture and editorial frameworks. At InfoEdge and Affinity, he played the long game—building authority, scaling content ops, and delivering compounding organic growth over multiple quarters.",
+          stats: "Avg. Tenure: 2+ Years | Focus: Sustainable Growth",
+          color: "text-red-500",
+          bg: "border-red-500"
+        };
+      case 'ODI':
+        return {
+          title: "The ODI Anchor",
+          subtitle: "Campaigns • Pace • Adaptability",
+          desc: "Versatile performance across varied domains. At Leverage Edu and Tekin, Raj managed targeted campaigns and pivoted strategies quickly to capture 'Sarkari Naukri' traffic and niche health segments, delivering impactful numbers in limited timeframes.",
+          stats: "Focus: Cluster Authority | Lead Gen Speed",
+          color: "text-blue-400",
+          bg: "border-blue-400"
+        };
+      case 'T20':
+        return {
+          title: "The T20 Striker",
+          subtitle: "Impact • ROI • High Volume",
+          desc: "High strike-rate performance. At BYJU'S, Raj handled massive daily traffic volumes (12k+ visitors) during peak exam seasons. He delivered immediate, result-oriented outcomes where speed and real-time trend jacking were critical.",
+          stats: "Metric: 12k Daily Visitors | Focus: Real-time Trends",
+          color: "text-fuchsia-400",
+          bg: "border-fuchsia-400"
+        };
+      default:
+        return {
+          title: "Quick Play Mode",
+          subtitle: "Complete Career Overview",
+          desc: "Viewing all matches. From building scratch-to-scale strategies to managing high-traffic newsrooms, this timeline covers Raj's complete journey across EdTech and Media.",
+          stats: "Total Experience: 8+ Years | All Formats",
+          color: "text-game-india-orange",
+          bg: "border-game-india-orange"
+        };
+    }
+  };
+
+  const scoutReport = getScoutReport();
+
+  const getCategoryIcon = (name: string) => {
+     switch(name) {
+        case 'Strategy': return <Target size={20} className="text-game-india-blue" />;
+        case 'Execution': return <Zap size={20} className="text-yellow-400" />;
+        case 'Leadership': return <Users size={20} className="text-green-500" />;
+        case 'Analytics': return <BarChart2 size={20} className="text-purple-500" />;
+        default: return <Brain size={20} className="text-white" />;
+     }
+  };
+
+  return (
+    <div className="min-h-screen bg-game-bg text-white font-sans overflow-x-hidden selection:bg-game-india-orange selection:text-black relative">
+      
+      {/* Gamification Widget (Sticky) */}
+      <QuickStatsCard />
+
+      {/* INTRO SEQUENCE - Plays Once Per Session */}
+      <AnimatePresence>
+        {!introComplete && <IntroSequence onComplete={handleIntroFinish} />}
+      </AnimatePresence>
+
+      {/* FIRST TIME VISITOR TUTORIAL - Only after intro */}
+      {introComplete && <TutorialModal />}
+
+      {/* INTERACTIVE BACKGROUND */}
+      <ScrollStadium mode={gameMode} />
+
+      {/* --- MOBILE STICKY HEADER (Glass-morphism) --- */}
+      <AnimatePresence>
+        {showStickyHeader && (
+          <motion.div 
+            initial={{ y: -100 }} animate={{ y: 0 }} exit={{ y: -100 }}
+            className="fixed top-0 left-0 w-full h-14 bg-slate-900/90 backdrop-blur-md border-b border-white/10 z-[60] md:hidden flex items-center justify-between px-4 shadow-xl"
+          >
+            <div className="font-sport font-bold text-xl uppercase italic text-white truncate max-w-[100px]">Raj Vimal</div>
+            <div className={`text-[10px] font-bold px-2 py-1 rounded border ${scoutReport.bg} ${scoutReport.color} uppercase bg-black/50`}>{gameMode.replace('_', ' ')}</div>
+            <button 
+              onClick={() => { scrollToSection('hero'); }}
+              className="bg-game-india-orange text-black text-[10px] font-bold px-3 py-2 rounded uppercase tracking-wider min-h-[32px]"
             >
-               <div className="flex items-center gap-1.5">
-                 <div className="bg-blue-600 w-8 h-8 rounded flex items-center justify-center">
-                    <Trophy size={16} fill="white" />
-                 </div>
-                 <div className="flex flex-col">
-                    <div className="flex gap-1">
-                        <span className="text-white font-bold text-lg tracking-tight uppercase group-hover:text-blue-400 transition-colors">ALL ROUNDER</span>
-                        <span className="text-blue-500 font-bold text-lg tracking-tight uppercase">CV</span>
-                    </div>
-                 </div>
-               </div>
+              Change Mode
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- TOP HUD (Desktop) --- */}
+      <header className="fixed top-0 w-full z-50 px-6 py-4 hidden md:flex items-center justify-between border-b border-white/10 bg-game-bg/90 backdrop-blur-md">
+         <div className="flex items-center gap-4 cursor-pointer" onClick={() => scrollToSection('hero')}>
+            <div className="bg-gradient-to-br from-game-india-orange to-red-600 p-2 transform -skew-x-12 shadow-[0_0_15px_rgba(255,153,51,0.5)] group hover:scale-110 transition-transform">
+               <Gamepad2 className="text-white transform skew-x-12" size={24} />
             </div>
-            
-            <div className="hidden md:flex gap-6 text-sm font-semibold text-slate-300 ml-4">
-               <button onMouseEnter={playHoverSound} onClick={() => scrollToSection('hero')} className="hover:text-white hover:scale-105 transition py-2 border-b-2 border-transparent hover:border-blue-500">Home</button>
-               <button onMouseEnter={playHoverSound} onClick={() => scrollToSection('impact')} className="hover:text-white hover:scale-105 transition py-2 border-b-2 border-transparent hover:border-blue-500">Stats</button>
-               <button onMouseEnter={playHoverSound} onClick={() => scrollToSection('experience')} className="hover:text-white hover:scale-105 transition py-2 border-b-2 border-transparent hover:border-blue-500">Innings</button>
-               <button onMouseEnter={playHoverSound} onClick={() => scrollToSection('skills')} className="hover:text-white hover:scale-105 transition py-2 border-b-2 border-transparent hover:border-blue-500">Kit Bag</button>
+            <div className="flex flex-col leading-none">
+               <span className="text-[10px] text-game-india-orange font-bold tracking-[0.2em] uppercase">EA SPORTS STYLE</span>
+               <span className="text-2xl font-sport font-bold italic tracking-wide text-white">CRICKET <span className="text-game-india-blue">'26</span></span>
             </div>
          </div>
 
-         <div className="flex gap-4 items-center">
+         {/* Mode Indicator / Switcher in Header */}
+         <div className="flex items-center gap-4">
+             <div className="text-right">
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Current Mode</div>
+                <div className={`font-sport font-bold text-xl uppercase ${scoutReport.color}`}>{gameMode.replace('_', ' ')}</div>
+             </div>
+             {gameMode !== 'QUICK_PLAY' && (
+                <button 
+                  onClick={() => { setGameMode('QUICK_PLAY'); scrollToSection('hero'); }}
+                  className="px-3 py-1 border border-white/20 text-xs font-bold uppercase hover:bg-white/10 rounded"
+                >
+                   Change Mode
+                </button>
+             )}
+         </div>
+
+         <div className="flex items-center gap-4">
              <button 
-                onClick={() => window.open(`mailto:${data.contact.email}`, '_blank')}
-                className="bg-[#fbbf24] hover:bg-[#f59e0b] text-black text-[11px] md:text-xs font-bold px-5 py-2.5 rounded-sm uppercase tracking-wider transition shadow-[0_0_15px_rgba(251,191,36,0.2)] hover:shadow-[0_0_25px_rgba(251,191,36,0.5)] flex items-center gap-2 transform hover:-translate-y-0.5"
-                onMouseEnter={playHoverSound}
-                onClickCapture={playClickSound}
+               onClick={onShare}
+               className="flex items-center justify-center p-3 hover:bg-white/10 rounded-full transition-colors border border-white/5"
+               title="Share Profile"
              >
-                <Briefcase size={14} fill="black" /> Hire Raj Now
+                <Share2 size={18} className="text-slate-300" />
+             </button>
+             <button 
+               onClick={() => { playClickSound(); onSwitchView(); }}
+               className="flex items-center gap-2 px-4 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 skew-btn transition group hover:shadow-[0_0_10px_rgba(255,255,255,0.2)] min-h-[48px]"
+               onMouseEnter={playHoverSound}
+             >
+                <div className="flex items-center gap-2 uppercase font-bold text-xs tracking-wider transform skew-x-[15deg]">
+                   <Monitor size={14} className="text-game-india-blue group-hover:text-white transition-colors" /> View CV
+                </div>
+             </button>
+             <button 
+               onClick={() => { playClickSound(); setIsContactOpen(true); }}
+               className="bg-game-india-orange hover:bg-orange-500 text-black px-6 py-2 skew-btn font-bold uppercase tracking-wider shadow-[0_0_20px_rgba(255,153,51,0.4)] transition hover:scale-105 active:scale-95 group overflow-hidden relative min-h-[48px]"
+               onMouseEnter={playHoverSound}
+             >
+                {/* Shine Effect */}
+                <div className="absolute inset-0 bg-white/30 transform -skew-x-12 -translate-x-full group-hover:animate-shine"></div>
+                <div className="flex items-center gap-2 transform skew-x-[15deg]">
+                   <Mail size={16} /> Negotiate
+                </div>
              </button>
          </div>
-      </nav>
+      </header>
 
-      {/* Hero Section */}
-      <div id="hero" className="relative w-full min-h-[90vh] flex items-center pt-32 pb-48 md:pb-60">
-         {/* Static background removed - ScrollStadium handles it now */}
-         <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#0f1014] via-transparent to-transparent"></div>
-
-         <div className="relative z-10 px-4 md:px-12 max-w-3xl">
-             <motion.div
-               initial={{ opacity: 0, y: 30 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ duration: 0.8 }}
-             >
-               <div className="flex flex-wrap items-center gap-3 text-[10px] md:text-xs font-bold text-slate-300 mb-6 tracking-wide uppercase">
-                  <span className="text-blue-400 flex items-center gap-1 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20"><Zap size={12} fill="currentColor"/> #1 Draft Pick</span>
-                  <span className="hidden md:inline w-1 h-1 bg-slate-500 rounded-full"></span>
-                  <span className="flex items-center gap-1"><Star size={10} className="text-yellow-500" fill="currentColor"/> 8+ Years XP</span>
-                  <span className="hidden md:inline w-1 h-1 bg-slate-500 rounded-full"></span>
-                  <span className="bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded border border-slate-700">Captain Material</span>
-                  <span className="hidden md:inline w-1 h-1 bg-slate-500 rounded-full"></span>
-                  <span>SEO & Strategy</span>
-               </div>
-
-               <h1 className="text-6xl md:text-8xl font-sport font-bold text-white mb-4 tracking-tighter leading-[0.9] drop-shadow-2xl">
-                  {data.name.split(' ')[0]} <span className="text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-blue-600">{data.name.split(' ')[1]}</span>
-               </h1>
-
-               <h2 className="text-xl md:text-3xl text-slate-200 font-medium mb-6 font-sport tracking-wide flex items-center gap-3">
-                  {data.title}
-               </h2>
-
-               <p className="text-slate-300 text-sm md:text-base leading-relaxed mb-10 line-clamp-4 md:line-clamp-none max-w-xl drop-shadow-md border-l-2 border-blue-500 pl-4 bg-black/20 backdrop-blur-sm p-4 rounded">
-                  {data.summary}
-               </p>
-
-               <div className="flex flex-wrap gap-4">
-                  <button 
-                    onClick={() => { playClickSound(); scrollToSection('experience'); }}
-                    className="bg-white text-black px-8 py-3.5 rounded hover:bg-slate-200 transition flex items-center gap-3 font-bold text-sm md:text-base active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.15)] group"
-                    onMouseEnter={playHoverSound}
-                  >
-                     <Play fill="black" size={20} className="group-hover:scale-110 transition-transform" />
-                     Watch Highlights
-                  </button>
-                  <button 
-                     onClick={() => { playClickSound(); onSwitchView(); }}
-                     className="bg-white/5 backdrop-blur-md text-white px-8 py-3.5 rounded hover:bg-white/10 transition flex items-center gap-3 font-bold text-sm md:text-base border border-white/10 active:scale-95 group"
-                     onMouseEnter={playHoverSound}
-                  >
-                     <MonitorPlay size={20} className="group-hover:text-blue-400 transition-colors" />
-                     View Resume
-                  </button>
-               </div>
-             </motion.div>
-         </div>
-      </div>
-      
-      {/* Content Trays */}
-      <div className="relative z-20 space-y-12 -mt-24 md:-mt-32 pb-0 bg-gradient-to-b from-transparent to-[#0f1014]/90 backdrop-blur-[2px]">
-         
-         {/* TRAY 1: STATS - TRADING CARD STYLE */}
-         <div id="impact" className="pl-4 md:pl-12 pt-12 md:pt-0">
-            <h3 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wider">
-               <BarChart3 className="text-blue-500" /> Stats & Records (Career Best) <ChevronRight size={18} className="text-slate-500" />
-            </h3>
+      {/* --- FOLD 1: HERO / MODE SELECTOR --- */}
+      <section id="hero" className="relative min-h-screen flex flex-col lg:flex-row items-center justify-center py-20 lg:py-24 px-4 md:px-8 z-10">
+         <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center mt-12 lg:mt-0">
             
-            <div className="flex gap-6 overflow-x-auto pb-8 hide-scrollbar snap-x pr-8">
-               {data.impactMetrics?.map((metric, i) => (
-                  <motion.div 
-                    key={`global-${i}`}
-                    whileHover={{ scale: 1.05, y: -10 }}
-                    onMouseEnter={playHoverSound}
-                    className="snap-start flex-shrink-0 w-64 h-80 relative rounded-xl overflow-hidden group border border-slate-700 hover:border-blue-500 shadow-2xl bg-black/40 backdrop-blur-md"
-                  >
-                      {/* Background Image */}
+            {/* --- MOBILE HEADER (Visible < lg) --- */}
+            <div className="lg:hidden flex flex-col items-center text-center order-1 gap-4 mb-4 mt-8">
+                <div className="relative">
+                   {/* Mobile Avatar Badge */}
+                   <div className="w-24 h-24 rounded-full border-[3px] border-game-india-orange shadow-[0_0_20px_rgba(255,153,51,0.4)] overflow-hidden bg-slate-800 relative z-10">
                       <img 
-                        src={metric.image} 
-                        alt="bg" 
-                        className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-500 scale-100 group-hover:scale-110"
+                        src="https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2667&auto=format&fit=crop" 
+                        className="w-full h-full object-cover"
+                        alt="Profile"
+                        loading="eager"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
+                   </div>
+                   <div className="absolute -bottom-2 -right-2 bg-white text-black font-sport font-bold text-sm px-2 py-0.5 rounded border border-game-india-blue z-20 transform -rotate-12">
+                      99 CM
+                   </div>
+                </div>
 
-                      {/* Top Badge */}
-                      <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-10">
-                          <div className="bg-blue-600/90 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider border border-white/20">
-                             Record Breaker
-                          </div>
-                          <Trophy className="text-yellow-400 drop-shadow-md" size={24} />
-                      </div>
+                <div className="space-y-1">
+                   <h1 className="text-3xl font-extrabold uppercase tracking-tight text-white leading-none">{data.name}</h1>
+                   <div className="text-slate-400 font-medium text-sm">{data.title.split('|')[0]}</div>
+                   <div className="text-game-india-orange font-bold text-sm italic">SEO & Editorial Strategy</div>
+                   <div className="text-[10px] text-slate-500 font-mono bg-white/5 inline-block px-2 py-0.5 rounded mt-1">8+ Years • EdTech Specialist</div>
+                </div>
 
-                      {/* Center Stats */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pt-8">
-                         <div className="text-5xl font-sport font-bold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] tracking-tight">
-                            {metric.value}
-                         </div>
-                         <div className="h-1 w-12 bg-blue-500 my-2 rounded-full"></div>
-                         <div className="text-sm font-bold text-slate-200 uppercase tracking-widest text-center px-4">
-                            {metric.label}
-                         </div>
-                      </div>
-
-                      {/* Bottom Details */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent z-10">
-                          <p className="text-[11px] text-slate-300 font-medium mb-1 line-clamp-2 text-center">
-                             {metric.description}
-                          </p>
-                          {metric.company && (
-                             <div className="flex items-center justify-center gap-1 text-[10px] text-blue-400 font-bold uppercase tracking-wide border-t border-white/10 pt-2 mt-2">
-                                <Briefcase size={10} /> {metric.company}
-                             </div>
-                          )}
-                      </div>
-                  </motion.div>
-               ))}
+                {/* Mobile Actions */}
+                <div className="grid grid-cols-2 gap-3 w-full max-w-xs mt-2">
+                   <button 
+                     onClick={() => { playClickSound(); setIsContactOpen(true); }}
+                     className="bg-game-india-orange text-black font-bold py-3 rounded text-sm uppercase tracking-wider min-h-[48px]"
+                   >
+                     Negotiate
+                   </button>
+                   <button 
+                     onClick={() => { playClickSound(); onSwitchView(); }}
+                     className="bg-white/10 text-white font-bold py-3 rounded text-sm uppercase tracking-wider min-h-[48px]"
+                   >
+                     View CV
+                   </button>
+                </div>
             </div>
-         </div>
 
-         {/* TRAY 2: PROJECTS - SUPER SIX ANIMATION */}
-         {(data.projects?.length > 0) && (
-            <div className="pl-4 md:pl-12">
-               <h3 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wider">
-                  <Star className="text-yellow-500" /> Match Winning Knocks (Highlights) <ChevronRight size={18} className="text-slate-500" />
-               </h3>
-               <div className="flex gap-4 overflow-x-auto pb-8 hide-scrollbar snap-x pr-8">
-                  {data.projects?.map((proj, i) => (
-                     <motion.div 
-                        key={i}
-                        className="relative snap-start flex-shrink-0 w-80 md:w-96 group cursor-pointer"
-                        onClick={() => { playClickSound(); handleOpenDetail(proj, 'project'); }}
-                        whileHover={{ scale: 1.02 }}
-                        onMouseEnter={playHoverSound}
-                     >
-                        {/* Cricket Ball Animation Container */}
-                        <div className="absolute inset-0 z-30 pointer-events-none overflow-hidden rounded-lg">
-                           {/* The Ball */}
-                           <div className="absolute top-1/2 left-[-50px] w-8 h-8 bg-red-600 rounded-full shadow-[inset_-2px_-2px_6px_rgba(0,0,0,0.5),0_0_15px_rgba(220,38,38,0.8)] opacity-0 group-hover:opacity-100 group-hover:animate-[flyBall_0.8s_ease-out_forwards] flex items-center justify-center border-2 border-white/20">
-                              <div className="w-full h-[2px] bg-white/50 rotate-45"></div>
-                           </div>
-                           
-                           {/* The 'SIX!' Text */}
-                           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-300 delay-300 z-40">
-                              <span className="text-6xl font-sport font-bold text-yellow-400 drop-shadow-[0_4px_0_rgba(0,0,0,1)] stroke-black" style={{ WebkitTextStroke: '1px black' }}>
-                                 SIX!
-                              </span>
-                           </div>
-                        </div>
+            {/* --- LEFT: Player Card (Desktop Only) --- */}
+            <motion.div 
+               initial={{ x: -100, opacity: 0 }}
+               animate={{ x: 0, opacity: 1 }}
+               transition={{ duration: 0.8 }}
+               className="hidden lg:flex lg:col-span-5 flex-col items-center lg:items-end relative group perspective-card order-2"
+            >
+                <motion.div 
+                  whileHover={{ rotateY: 5, rotateX: 5, scale: 1.02 }}
+                  className="relative w-full max-w-md aspect-[3/4] bg-gradient-to-b from-slate-800 to-black border-[6px] border-game-india-orange rounded-2xl shadow-[0_0_60px_rgba(19,99,223,0.4)] overflow-hidden transition-all duration-300"
+               >
+                  {/* Card Background Graphics */}
+                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-30"></div>
+                  <div className="absolute top-0 w-full h-2/3 bg-gradient-to-b from-game-india-blue/60 to-transparent mix-blend-overlay"></div>
+                  
+                  {/* OVR Badge */}
+                  <div className="absolute top-6 left-6 flex flex-col items-center z-20">
+                     <span className="text-7xl font-sport font-bold text-white drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">99</span>
+                     <span className="text-xl font-bold text-game-india-orange uppercase tracking-wider">CM</span>
+                  </div>
 
-                        {/* Card Content */}
-                        <div className="aspect-video w-full rounded-lg overflow-hidden relative border border-white/10 group-hover:border-yellow-500/50 transition-all shadow-xl bg-[#1e293b]/80 backdrop-blur-sm">
-                           <img 
-                              src={proj.image || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2670&auto=format&fit=crop"} 
-                              className="w-full h-full object-cover opacity-60 group-hover:opacity-90 transition-opacity duration-300" 
-                           />
-                           <div className="absolute inset-0 bg-gradient-to-t from-[#0f1014] via-transparent to-transparent"></div>
-                           
-                           {/* 'Live' Badge */}
-                           <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded animate-pulse flex items-center gap-1 z-20">
-                              <span className="w-1.5 h-1.5 bg-white rounded-full"></span> LIVE REPLAY
-                           </div>
-
-                           <div className="absolute bottom-0 left-0 right-0 p-5 transform translate-y-2 group-hover:translate-y-0 transition-transform z-20">
-                              <h4 className="text-white font-bold text-lg leading-tight mb-1 drop-shadow-md group-hover:text-yellow-400 transition-colors">{proj.title}</h4>
-                              <p className="text-slate-300 text-xs line-clamp-2">{proj.description}</p>
-                           </div>
-                           
-                           {/* Play Overlay */}
-                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-black/30 backdrop-blur-[2px]">
-                               <div className="w-16 h-16 rounded-full border-2 border-white/30 flex items-center justify-center">
-                                  <Play fill="white" size={32} />
-                               </div>
-                           </div>
-                        </div>
-
-                        {/* Styles for the ball animation */}
-                        <style>{`
-                           @keyframes flyBall {
-                              0% { left: -50px; top: 110%; transform: scale(0.5); opacity: 1; }
-                              50% { top: 20%; transform: scale(1.2); }
-                              100% { left: 120%; top: -20%; transform: scale(0.8); opacity: 0; }
-                           }
-                        `}</style>
-                     </motion.div>
-                  ))}
-               </div>
-            </div>
-         )}
-
-         {/* TRAY 3: INNINGS - Standard Cards */}
-         <div id="experience" className="pl-4 md:pl-12">
-            <h3 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wider">
-               <Target className="text-red-500" /> Innings (Career History) <ChevronRight size={18} className="text-slate-500" />
-            </h3>
-            <div className="flex gap-4 overflow-x-auto pb-8 hide-scrollbar snap-x pr-8">
-               {data.experience?.map((exp, i) => (
-                  <PrimeCard 
-                     key={i}
-                     title={exp.role}
-                     subtitle={exp.company}
-                     meta={`${exp.startDate} • ${exp.endDate}`}
-                     image={exp.image}
-                     isPremium={i === 0}
-                     label={i === 0 ? "Current Season" : "Classic Match"}
-                     onClick={() => handleOpenDetail(exp, 'experience')}
+                  {/* Player Image */}
+                  <img 
+                     src="https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=2667&auto=format&fit=crop" 
+                     className="absolute bottom-0 right-[-15%] w-[115%] h-[90%] object-cover object-top mix-blend-normal filter contrast-125 saturate-0 group-hover:saturate-100 transition-all duration-700"
+                     alt="Player"
+                     loading="eager"
                   />
-               ))}
-            </div>
-         </div>
-
-         {/* TRAY 4: KIT BAG */}
-         <div id="skills" className="pl-4 md:pl-12">
-            <h3 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wider">
-               <Shield className="text-purple-500" /> Kit Bag (Skills Arsenal) <ChevronRight size={18} className="text-slate-500" />
-            </h3>
-            <div className="flex gap-4 overflow-x-auto pb-8 hide-scrollbar snap-x pr-8">
-               {data.skillCategories?.map((cat, i) => (
-                  <motion.div 
-                    key={i} 
-                    onMouseEnter={playHoverSound}
-                    whileHover={{ y: -5 }}
-                    className="snap-start flex-shrink-0 w-64 bg-[#1e293b]/80 backdrop-blur-sm hover:bg-[#252c3d] rounded-lg p-6 transition-all cursor-default border-t-4 border-blue-500 shadow-lg group"
-                  >
-                     <h4 className={`font-bold text-base uppercase tracking-wider mb-4 flex items-center gap-2 ${
-                        i===0 ? 'text-blue-400' : i===1 ? 'text-purple-400' : i===2 ? 'text-green-400' : 'text-orange-400'
-                     }`}>
-                        {i===0 && <Activity size={16}/>}
-                        {cat.name}
-                     </h4>
-                     <div className="flex flex-wrap gap-2">
-                        {cat.items?.map((skill, s) => (
-                           <span key={s} className="text-[11px] bg-black/40 px-2 py-1 rounded text-slate-200 font-medium border border-white/5 group-hover:border-white/10 transition-colors">
-                              {skill}
-                           </span>
-                        ))}
+                  
+                  {/* Name Plate */}
+                  <div className="absolute bottom-8 left-0 w-full text-center z-20">
+                     <div className="bg-white/90 backdrop-blur mx-6 py-3 transform skew-x-[-10deg] shadow-lg border-l-8 border-game-india-orange">
+                        <h1 className="text-5xl font-sport font-bold text-black uppercase transform skew-x-[10deg] leading-none tracking-tight">
+                           {data.name}
+                        </h1>
                      </div>
-                  </motion.div>
-               ))}
+                  </div>
+               </motion.div>
+            </motion.div>
+
+            {/* --- RIGHT: Intro & MODE SELECTOR --- */}
+            <motion.div 
+               initial={{ x: 100, opacity: 0 }}
+               animate={{ x: 0, opacity: 1 }}
+               transition={{ duration: 0.8, delay: 0.2 }}
+               className="lg:col-span-7 space-y-6 lg:space-y-8 order-3 w-full"
+            >
+               {/* Desktop Intro Title (Hidden on Mobile) */}
+               <div className="hidden lg:block space-y-4">
+                  <h2 className="text-5xl md:text-7xl font-sport font-bold uppercase italic leading-[0.85]">
+                     Select <span className="text-game-india-orange text-glow-orange">Match Format</span>
+                  </h2>
+                  <p className="text-slate-300 text-lg max-w-xl leading-relaxed">
+                     Choose a game mode to view Raj's experience tailored to your team's needs.
+                  </p>
+               </div>
+
+               {/* Mobile CTA Hint */}
+               <div className="lg:hidden text-center">
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Select Format to Begin</p>
+               </div>
+
+               {/* MODE SELECTION GRID */}
+               <div className="grid grid-cols-2 gap-3 md:gap-4">
+                  
+                  {/* TEST MODE */}
+                  <button 
+                     onClick={() => { setGameMode('TEST'); playClickSound(); scrollToSection('quick-stats'); }}
+                     onMouseEnter={playHoverSound}
+                     className="group relative bg-[#2a0a0a] border border-red-900/50 hover:border-red-500 p-3 lg:p-6 rounded-lg text-left transition-all hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(220,38,38,0.3)] overflow-hidden"
+                  >
+                     <div className="absolute right-[-10px] top-[-10px] lg:right-[-20px] lg:top-[-20px] text-red-900/20 group-hover:text-red-900/40 transition-colors">
+                        <Clock className="w-16 h-16 lg:w-24 lg:h-24" />
+                     </div>
+                     <div className="relative z-10">
+                        <div className="flex items-center gap-1.5 mb-1">
+                           <span className="text-red-500 font-bold text-[10px] lg:text-xs uppercase tracking-widest">Red Ball</span>
+                           <InfoTooltip text="In cricket, Test matches last 5 days. Here: Focus on long-term strategy, architecture, and sustainable growth." />
+                        </div>
+                        <h3 className="text-xl lg:text-3xl font-sport font-bold text-white uppercase italic">Test Mode</h3>
+                        <p className="text-slate-400 text-[10px] lg:text-xs mt-1 lg:mt-2 line-clamp-2">Strategy & Architecture<br className="hidden lg:block"/>(InfoEdge, Affinity)</p>
+                     </div>
+                  </button>
+
+                  {/* ODI MODE */}
+                  <button 
+                     onClick={() => { setGameMode('ODI'); playClickSound(); scrollToSection('quick-stats'); }}
+                     onMouseEnter={playHoverSound}
+                     className="group relative bg-[#0a1a2a] border border-blue-900/50 hover:border-blue-500 p-3 lg:p-6 rounded-lg text-left transition-all hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] overflow-hidden"
+                  >
+                     <div className="absolute right-[-10px] top-[-10px] lg:right-[-20px] lg:top-[-20px] text-blue-900/20 group-hover:text-blue-900/40 transition-colors">
+                        <Activity className="w-16 h-16 lg:w-24 lg:h-24" />
+                     </div>
+                     <div className="relative z-10">
+                        <div className="flex items-center gap-1.5 mb-1">
+                           <span className="text-blue-400 font-bold text-[10px] lg:text-xs uppercase tracking-widest">Day / Night</span>
+                           <InfoTooltip text="One Day International (ODI) matches require versatility. Here: Adaptability, campaign management, and pivoting strategies." />
+                        </div>
+                        <h3 className="text-xl lg:text-3xl font-sport font-bold text-white uppercase italic">ODI Mode</h3>
+                        <p className="text-slate-400 text-[10px] lg:text-xs mt-1 lg:mt-2 line-clamp-2">Campaigns & Agility<br className="hidden lg:block"/>(Leverage, Live Cities)</p>
+                     </div>
+                  </button>
+
+                  {/* T20 MODE */}
+                  <button 
+                     onClick={() => { setGameMode('T20'); playClickSound(); scrollToSection('quick-stats'); }}
+                     onMouseEnter={playHoverSound}
+                     className="group relative bg-[#1a052a] border border-fuchsia-900/50 hover:border-fuchsia-500 p-3 lg:p-6 rounded-lg text-left transition-all hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(217,70,239,0.3)] overflow-hidden"
+                  >
+                     <div className="absolute right-[-10px] top-[-10px] lg:right-[-20px] lg:top-[-20px] text-fuchsia-900/20 group-hover:text-fuchsia-900/40 transition-colors">
+                        <ZapIcon className="w-16 h-16 lg:w-24 lg:h-24" />
+                     </div>
+                     <div className="relative z-10">
+                        <div className="flex items-center gap-1.5 mb-1">
+                           <span className="text-fuchsia-400 font-bold text-[10px] lg:text-xs uppercase tracking-widest">Powerplay</span>
+                           <InfoTooltip text="In cricket, Powerplay refers to aggressive early innings. Here: High-impact quick wins, speed, and immediate ROI." />
+                        </div>
+                        <h3 className="text-xl lg:text-3xl font-sport font-bold text-white uppercase italic">T20 Mode</h3>
+                        <p className="text-slate-400 text-[10px] lg:text-xs mt-1 lg:mt-2 line-clamp-2">High Impact & ROI<br className="hidden lg:block"/>(BYJU'S)</p>
+                     </div>
+                  </button>
+
+                   {/* QUICK PLAY */}
+                   <button 
+                     onClick={() => { setGameMode('QUICK_PLAY'); playClickSound(); scrollToSection('quick-stats'); }}
+                     onMouseEnter={playHoverSound}
+                     className="group relative bg-white/5 border border-white/10 hover:border-game-india-orange p-3 lg:p-6 rounded-lg text-left transition-all hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(255,153,51,0.3)] overflow-hidden"
+                  >
+                     <div className="absolute right-[-10px] top-[-10px] lg:right-[-20px] lg:top-[-20px] text-white/5 group-hover:text-white/10 transition-colors">
+                        <Layout className="w-16 h-16 lg:w-24 lg:h-24" />
+                     </div>
+                     <div className="relative z-10">
+                        <div className="text-game-india-orange font-bold text-[10px] lg:text-xs uppercase tracking-widest mb-1">Overview</div>
+                        <h3 className="text-xl lg:text-3xl font-sport font-bold text-white uppercase italic">Quick Play</h3>
+                        <p className="text-slate-400 text-[10px] lg:text-xs mt-1 lg:mt-2 line-clamp-2">All Roles, All Companies<br className="hidden lg:block"/>8+ Years Experience</p>
+                     </div>
+                  </button>
+               </div>
+
+            </motion.div>
+         </div>
+
+         {/* Scroll Indicator */}
+         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50 animate-pulse pointer-events-none">
+            <span className="text-[10px] uppercase tracking-[0.3em]">Scroll for Timeline</span>
+            <ChevronDown size={20} />
+         </div>
+      </section>
+
+      {/* --- QUICK STATS (Mobile Optimized) --- */}
+      <section id="quick-stats" className="py-8 bg-black/20 border-b border-white/5 md:hidden">
+        <div className="px-4">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Quick Stats</h3>
+          <div className="grid grid-cols-2 gap-3">
+             {data.impactMetrics.slice(0, 4).map((m, i) => (
+                <div key={i} className="bg-white/5 p-3 rounded border border-white/5">
+                   <div className="text-xl font-sport font-bold text-game-india-blue">{m.value}</div>
+                   <div className="text-[10px] text-slate-400 uppercase leading-tight">{m.label}</div>
+                </div>
+             ))}
+          </div>
+        </div>
+      </section>
+
+
+      {/* --- FOLD 2: CAREER MODE (Filtered) --- */}
+      <section id="career" className="relative py-24 px-4 md:px-8 bg-black/40 border-t border-white/5 backdrop-blur-sm z-10 min-h-[80vh]">
+         <div className="max-w-6xl mx-auto">
+            
+            {/* Context Header for Career Timeline */}
+            <div className="mb-6 flex items-center gap-3 opacity-80">
+               <Clock className="text-game-india-orange" size={20} />
+               <p className="text-sm md:text-base text-slate-300 font-bold uppercase tracking-wide">
+                  📅 Raj's career journey — From 2017 to present, across leading companies
+               </p>
+            </div>
+
+            {/* SCOUT REPORT PANEL */}
+            <motion.div
+               key={gameMode} 
+               initial={{ opacity: 0, y: -20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className={`mb-12 p-6 rounded-lg border-l-4 ${scoutReport.bg} bg-black/60 backdrop-blur-md relative overflow-hidden`}
+            >
+               <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <Activity size={80} />
+               </div>
+               <div className="relative z-10">
+                  <div className={`text-xs font-bold uppercase tracking-widest mb-2 ${scoutReport.color}`}>Scout Report: {gameMode.replace('_', ' ')}</div>
+                  <h3 className="text-3xl font-sport font-bold text-white uppercase italic mb-2">{scoutReport.title}</h3>
+                  <div className="flex flex-wrap gap-4 text-sm text-slate-300 mb-4">
+                     <span className="font-bold text-white">{scoutReport.subtitle}</span>
+                     <span className="opacity-50">|</span>
+                     <span>{scoutReport.stats}</span>
+                  </div>
+                  <p className="text-slate-400 max-w-3xl leading-relaxed text-sm">
+                     {scoutReport.desc}
+                  </p>
+               </div>
+            </motion.div>
+
+            {/* Timeline / List */}
+            <div className="space-y-6">
+               <AnimatePresence mode="wait">
+                  {filteredExperience.length > 0 ? (
+                     filteredExperience.map((exp, i) => (
+                        <motion.div 
+                           key={`${exp.company}-${gameMode}`}
+                           initial={{ opacity: 0, x: -50 }}
+                           whileInView={{ opacity: 1, x: 0 }}
+                           viewport={{ once: true }}
+                           transition={{ delay: i * 0.1 }}
+                           whileHover={{ scale: 1.01, x: 10 }}
+                           onClick={() => { handleOpenDetail(exp, 'experience'); playClickSound(); }}
+                           onMouseEnter={playHoverSound}
+                           className={`group relative min-h-[128px] md:h-40 bg-game-panel border-l-8 hover:border-game-india-blue transition-all cursor-pointer flex flex-col md:flex-row items-stretch overflow-hidden rounded-r-lg shadow-lg hover:shadow-2xl hover:bg-white/5 ${scoutReport.bg}`}
+                        >
+                           {/* Background Image / Texture */}
+                           <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                              <img src={exp.image} className="w-full h-full object-cover grayscale" alt="bg" loading="lazy" />
+                           </div>
+                           <div className="absolute inset-0 bg-gradient-to-r from-game-panel via-game-panel/90 to-transparent pointer-events-none"></div>
+
+                           {/* Date Block (Match Day) - Top on mobile, Left on desktop */}
+                           <div className="relative md:w-48 flex md:flex-col items-center justify-between md:justify-center px-4 py-2 md:p-0 border-b md:border-b-0 md:border-r border-white/5 z-10 bg-black/20 group-hover:bg-game-india-blue/10 transition-colors shrink-0">
+                              <span className={`font-bold text-xs md:text-sm uppercase tracking-widest ${scoutReport.color}`}>{exp.startDate.split(' ')[1]}</span>
+                              <span className="text-white font-sport text-3xl md:text-5xl">{exp.startDate.split(' ')[0]}</span>
+                              <div className="md:hidden text-[10px] text-slate-400 font-mono bg-black/50 px-2 rounded">
+                                 {exp.keyOutcome}
+                              </div>
+                           </div>
+
+                           {/* Info Block */}
+                           <div className="relative flex-1 p-4 md:px-12 z-10 flex flex-col justify-center">
+                              <h4 className="text-xl md:text-4xl font-sport font-bold text-white uppercase italic group-hover:text-game-india-blue md:group-hover:translate-x-2 transition-all duration-300">
+                                 {exp.role}
+                              </h4>
+                              <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 mt-1 md:mt-2">
+                                 <span className="text-slate-300 font-bold uppercase tracking-wider text-xs md:text-sm md:border-r border-slate-600 md:pr-4">{exp.company}</span>
+                                 <span className={`font-mono text-xs hidden md:inline-block ${scoutReport.color}`}>KEY STAT: {exp.keyOutcome}</span>
+                              </div>
+                           </div>
+
+                           {/* Action Icon */}
+                           <div className="relative hidden md:flex px-8 z-10 opacity-30 group-hover:opacity-100 group-hover:scale-125 transition-all items-center">
+                              <div className="w-12 h-12 rounded-full border-2 border-white flex items-center justify-center">
+                                 <Play fill="white" size={20} />
+                              </div>
+                           </div>
+                        </motion.div>
+                     ))
+                  ) : (
+                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-12 text-center text-slate-500 font-sport text-2xl uppercase">
+                        No matches found in this format.
+                     </motion.div>
+                  )}
+               </AnimatePresence>
             </div>
          </div>
+      </section>
 
-         {/* FOOTER: HINGLISH PRESS CONFERENCE */}
-         <div id="contact" className="relative mt-24 py-20 px-4 md:px-12 bg-gradient-to-t from-blue-900/20 to-transparent border-t border-white/5 backdrop-blur-md">
-             <div className="absolute inset-0 z-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1510051640316-5b3240988c8b?q=80&w=2669&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay"></div>
-             
-             <div className="relative z-20 max-w-5xl mx-auto text-center flex flex-col items-center">
-                <motion.div
-                   initial={{ opacity: 0, y: 30 }}
-                   whileInView={{ opacity: 1, y: 0 }}
-                   viewport={{ once: true }}
-                   transition={{ duration: 0.8 }}
+      {/* --- FOLD 3: LOCKER ROOM (Stats & Highlights) --- */}
+      <section id="stats" className="relative py-24 px-4 md:px-8 z-10">
+         <div className="max-w-7xl mx-auto">
+            
+            {/* BADGES SECTION */}
+            <BadgeSection badges={data.badges} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+              {/* COLUMN 1: PLAYER ATTRIBUTES */}
+              <div id="attributes">
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    className="flex flex-col gap-2 mb-12 border-b-4 border-white/10 pb-4"
                 >
-                   <div className="inline-block bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6 border border-blue-500/30">
-                      Transfer Window Open
-                   </div>
-                   <h2 className="text-4xl md:text-7xl font-sport font-bold text-white mb-6 tracking-wide drop-shadow-2xl uppercase">
-                       Match Winner <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Chahiye?</span>
-                   </h2>
-                   <p className="text-slate-400 text-lg md:text-xl mb-12 max-w-2xl mx-auto leading-relaxed">
-                       Strategy solid, execution tez, aur results... next level! <br/>
-                       Don't wait for the auction. Seedha <strong>'Direct Transfer'</strong> option is open. <br/>
-                       <span className="text-white italic opacity-80 mt-2 block text-sm">Apni team ka run-rate badhao!</span>
-                   </p>
-
-                   <div className="flex flex-wrap justify-center gap-6 mb-16">
-                       <button 
-                           onClick={() => { playClickSound(); window.open(`mailto:${data.contact.email}`); }}
-                           onMouseEnter={playHoverSound}
-                           className="bg-[#fbbf24] text-black px-8 py-4 rounded font-bold text-lg uppercase tracking-wider hover:bg-[#f59e0b] hover:scale-105 transition shadow-[0_0_20px_rgba(251,191,36,0.3)] flex items-center gap-3 group"
-                       >
-                           <Mail className="w-5 h-5 group-hover:animate-bounce" /> Offer Letter Bhejo
-                       </button>
-                       
-                        <button 
-                           onClick={() => { playClickSound(); window.open(`https://${data.contact.linkedin}`); }}
-                           onMouseEnter={playHoverSound}
-                           className="bg-blue-600 text-white px-8 py-4 rounded font-bold text-lg uppercase tracking-wider hover:bg-blue-700 hover:scale-105 transition shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center gap-3 group"
-                       >
-                           <Linkedin className="w-5 h-5 group-hover:scale-110 transition-transform" /> Scout Profile
-                       </button>
-                   </div>
-
-                   <div className="flex justify-center items-center gap-8 md:gap-12 flex-wrap">
-                      <a href={`tel:${data.contact.phone}`} className="flex flex-col items-center gap-2 group cursor-pointer" onMouseEnter={playHoverSound} onClick={playClickSound}>
-                         <div className="p-4 bg-white/5 rounded-full group-hover:bg-green-500/20 group-hover:text-green-400 transition-colors border border-white/10">
-                            <Phone size={24} />
-                         </div>
-                         <span className="text-xs text-slate-500 font-bold uppercase tracking-widest group-hover:text-green-400">Phone Ghumao</span>
-                      </a>
-                      
-                      <a href={`mailto:${data.contact.email}`} className="flex flex-col items-center gap-2 group cursor-pointer" onMouseEnter={playHoverSound} onClick={playClickSound}>
-                         <div className="p-4 bg-white/5 rounded-full group-hover:bg-yellow-500/20 group-hover:text-yellow-400 transition-colors border border-white/10">
-                            <Mail size={24} />
-                         </div>
-                         <span className="text-xs text-slate-500 font-bold uppercase tracking-widest group-hover:text-yellow-400">Mail Drop Karo</span>
-                      </a>
-
-                      <a href={`https://twitter.com/${data.contact.twitter.replace('@', '')}`} target="_blank" className="flex flex-col items-center gap-2 group cursor-pointer" onMouseEnter={playHoverSound} onClick={playClickSound}>
-                         <div className="p-4 bg-white/5 rounded-full group-hover:bg-blue-400/20 group-hover:text-blue-400 transition-colors border border-white/10">
-                            <Twitter size={24} />
-                         </div>
-                         <span className="text-xs text-slate-500 font-bold uppercase tracking-widest group-hover:text-blue-400">Twitter DM</span>
-                      </a>
-                      
-                      <div className="flex flex-col items-center gap-2 group cursor-default">
-                         <div className="p-4 bg-white/5 rounded-full group-hover:bg-red-500/20 group-hover:text-red-400 transition-colors border border-white/10">
-                            <MapPin size={24} />
-                         </div>
-                         <span className="text-xs text-slate-500 font-bold uppercase tracking-widest group-hover:text-red-400">Noida HQ</span>
-                      </div>
-                   </div>
-
-                   <div className="mt-20 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center text-[10px] md:text-xs text-slate-600 font-bold uppercase tracking-widest gap-4 w-full">
-                       <div>© {new Date().getFullYear()} Raj Vimal • The Content Captain</div>
-                       <div className="flex gap-4">
-                          <span>Privacy Policy (Secrets Safe Hain)</span>
-                          <span>Terms (Pehle Hire Karo)</span>
-                       </div>
-                   </div>
+                    <div className="flex items-center gap-4">
+                      <Shield className="text-game-india-orange" size={32} />
+                      <h3 className="text-3xl font-sport font-bold uppercase italic">
+                          Player Attributes <span className="text-sm text-slate-400 font-sans normal-case ml-2 opacity-70 tracking-normal not-italic">(Skill Ratings)</span>
+                      </h3>
+                    </div>
+                    <p className="text-slate-400 text-sm">📊 What Raj excels at — Rated on technical depth and real-world impact.</p>
                 </motion.div>
-             </div>
-         </div>
 
+                <div className="grid gap-6">
+                    {data.skillCategories.map((cat, i) => (
+                      <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, x: -30 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.1 }}
+                          className="bg-game-panel/80 backdrop-blur border border-white/10 p-6 rounded-lg hover:border-game-india-blue/50 transition-colors"
+                      >
+                          <h4 className="font-sport text-2xl uppercase tracking-widest border-b border-white/10 pb-2 mb-4 flex justify-between items-center text-white">
+                            <span className="flex items-center gap-3">
+                                {getCategoryIcon(cat.name)}
+                                {cat.name}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500 font-sans tracking-normal">RATING</span>
+                                <span className="text-game-india-orange font-bold">9{8-i}</span>
+                            </div>
+                          </h4>
+                          <div className="space-y-3">
+                            {cat.items.map((skill, s) => (
+                                <SkillCard key={s} skill={skill} />
+                            ))}
+                          </div>
+                      </motion.div>
+                    ))}
+                    
+                    {/* Emerging Skills */}
+                    <motion.div 
+                      whileInView={{ opacity: 1 }} 
+                      className="bg-gradient-to-br from-game-panel to-blue-900/20 border border-blue-500/20 p-6 rounded-lg"
+                    >
+                        <h4 className="font-sport text-xl uppercase tracking-widest text-blue-400 mb-4 flex items-center gap-2">
+                           <Sparkles size={18} /> Emerging Tech & Skills
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                           {data.emergingSkills.map((skill, i) => (
+                              <span key={i} className="bg-blue-500/10 text-blue-200 border border-blue-500/20 px-3 py-1.5 rounded text-xs font-bold uppercase">
+                                 {skill}
+                              </span>
+                           ))}
+                        </div>
+                    </motion.div>
+                </div>
+              </div>
+
+              {/* COLUMN 2: HIGHLIGHTS & UPDATES */}
+              <div id="highlights">
+                
+                {/* LATEST UPDATES */}
+                <UpdatesTimeline updates={data.latestUpdates} />
+
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    className="flex flex-col gap-2 mb-12 border-b-4 border-white/10 pb-4"
+                >
+                    <div className="flex items-center gap-4">
+                      <Play className="text-game-india-blue" size={32} />
+                      <div className="flex items-center gap-2">
+                          <h3 className="text-3xl font-sport font-bold uppercase italic">
+                            Match Replays <span className="text-sm text-slate-400 font-sans normal-case ml-2 opacity-70 tracking-normal not-italic">(Case Studies)</span>
+                          </h3>
+                          <InfoTooltip text="Real-world examples of Raj's work impact. Click any replay to see detailed project breakdown." />
+                      </div>
+                    </div>
+                    <p className="text-slate-400 text-sm">🎯 What Raj has accomplished — Real projects, real results, real impact.</p>
+                </motion.div>
+
+                <div className="space-y-8">
+                    {data.projects.map((proj, i) => (
+                      <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, y: 30 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2 }}
+                          onClick={() => { handleOpenDetail(proj, 'project'); playClickSound(); }}
+                          onMouseEnter={playHoverSound}
+                          className="group relative aspect-video bg-black border-4 border-white/10 hover:border-game-india-orange cursor-pointer overflow-hidden rounded-xl shadow-2xl transition-all hover:scale-[1.02]"
+                      >
+                          <img 
+                            src={proj.image} 
+                            alt={proj.title} 
+                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" 
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                          
+                          {/* Center Play Button */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                            <div className="w-20 h-20 rounded-full bg-game-india-orange text-black flex items-center justify-center shadow-[0_0_30px_rgba(255,153,51,0.6)] transform scale-0 group-hover:scale-100 transition-transform">
+                                <Play fill="black" size={32} className="ml-1" />
+                            </div>
+                          </div>
+
+                          {/* Bottom Info */}
+                          <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/95 to-transparent z-10">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded animate-pulse uppercase">Highlight Reel</span>
+                                <span className="text-game-india-blue text-xs font-bold uppercase tracking-wider">Strategy & Execution</span>
+                            </div>
+                            <h3 className="text-white font-sport text-3xl uppercase leading-none truncate">{proj.title}</h3>
+                            <p className="text-slate-400 text-sm mt-1 truncate">{proj.subtitle}</p>
+                          </div>
+                      </motion.div>
+                    ))}
+
+                    {/* Locked Slots */}
+                    <div className="grid grid-cols-2 gap-4">
+                        {[1, 2].map(n => (
+                          <div key={`lock-${n}`} className="aspect-video bg-white/5 border-2 border-white/5 flex flex-col items-center justify-center text-slate-600 rounded-lg hover:bg-white/10 transition-colors">
+                              <Award size={32} className="mb-2 opacity-50" />
+                              <span className="font-sport text-xl uppercase tracking-widest opacity-50">Locked</span>
+                          </div>
+                        ))}
+                    </div>
+                </div>
+              </div>
+            </div>
+
+         </div>
+      </section>
+
+      {/* --- BACK TO TOP BUTTON (Mobile/Desktop) --- */}
+      <AnimatePresence>
+        {showBackToTop && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 1 }} 
+            exit={{ scale: 0, opacity: 0 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-16 right-4 w-14 h-14 bg-game-india-orange text-black rounded-full shadow-[0_0_20px_rgba(255,153,51,0.5)] z-[40] flex items-center justify-center print:hidden border-2 border-white/20 hover:scale-110 transition-transform"
+            aria-label="Back to top"
+          >
+            <ArrowUp size={24} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* --- FOOTER --- */}
+      <footer className="relative bg-black border-t border-white/10 py-12 px-8 z-10 pb-20">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+             <div className="text-center md:text-left">
+                <h4 className="font-sport text-3xl font-bold text-white uppercase italic">Raj Vimal</h4>
+                <p className="text-slate-500 text-sm">Content Manager | SEO Strategist | Leader</p>
+             </div>
+             <div className="flex gap-6">
+                 <button onClick={() => window.open('https://linkedin.com/in/rjvimal', '_blank')} className="text-slate-400 hover:text-game-india-blue transition-colors p-2 min-h-[48px] min-w-[48px] flex items-center justify-center"><Monitor size={24} /></button>
+                 <button onClick={() => setIsContactOpen(true)} className="text-slate-400 hover:text-game-india-orange transition-colors p-2 min-h-[48px] min-w-[48px] flex items-center justify-center"><Mail size={24} /></button>
+             </div>
+             <div className="text-xs text-slate-600 font-mono">
+                © 2026 EA SPORTS STYLE RESUME. PRESS START TO BEGIN.
+             </div>
+          </div>
+      </footer>
+
+      {/* --- BOTTOM TICKER --- */}
+      <div className="fixed bottom-0 w-full h-10 bg-black border-t border-white/20 z-50 flex items-center">
+         <div className="bg-game-india-orange text-black font-bold px-4 h-full flex items-center text-xs uppercase tracking-widest shrink-0">
+            News Feed
+         </div>
+         <div className="flex-1 overflow-hidden relative h-full">
+            <div className="animate-marquee whitespace-nowrap flex items-center gap-12 text-slate-400 text-xs font-mono h-full px-4">
+               <span>• RAJ VIMAL HITS 50% ORGANIC GROWTH AT INFOEDGE •</span>
+               <span>• TRANSFER RUMORS: TOP COMPANIES SCOUTING FOR NEW CONTENT LEAD •</span>
+               <span>• SEO STRATEGY RATED 99/99 BY GOOGLE ANALYTICS •</span>
+               <span>• NEW HIGH SCORE: 7,000 QUALIFIED LEADS GENERATED •</span>
+            </div>
+         </div>
       </div>
 
+      {/* Modals */}
       <MatchDetailModal 
         item={activeItem} 
         type={activeType} 
         onClose={() => setActiveItem(null)} 
       />
+
+      <ContactForm 
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+      />
     </div>
   );
 };
-
-const PrimeCard = ({ title, subtitle, meta, image, isPremium, label, onClick }: any) => {
-   return (
-      <motion.div 
-         className="snap-start flex-shrink-0 w-72 md:w-80 group cursor-pointer"
-         onClick={() => { playClickSound(); onClick(); }}
-         whileHover={{ scale: 1.05, zIndex: 10 }}
-         onMouseEnter={playHoverSound}
-         transition={{ duration: 0.2 }}
-      >
-         <div className="aspect-video w-full rounded-md overflow-hidden relative border border-white/5 group-hover:border-blue-500/50 transition-all shadow-lg bg-[#1e293b]/90 backdrop-blur-sm">
-            <img 
-               src={image || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2670&auto=format&fit=crop"} 
-               className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0f1014] via-[#0f1014]/60 to-transparent"></div>
-            
-            {isPremium && (
-               <div className="absolute top-2 right-2 bg-[#fbbf24] text-black text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wide shadow-sm z-10">
-                  Top Form
-               </div>
-            )}
-            {!isPremium && label && (
-                <div className="absolute top-2 right-2 bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wide shadow-sm z-10">
-                  {label}
-                </div>
-            )}
-            
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-               <div className="bg-white/20 backdrop-blur-md p-3 rounded-full border border-white/30 shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                  <Play fill="white" className="text-white" size={24} />
-               </div>
-            </div>
-
-            <div className="absolute bottom-0 left-0 right-0 p-4 transform translate-y-1 group-hover:translate-y-0 transition-transform z-10">
-               <h4 className="text-white font-bold text-sm line-clamp-1 drop-shadow-md tracking-wide">{title}</h4>
-               <p className="text-slate-300 text-xs line-clamp-1 mb-1 font-medium">{subtitle}</p>
-               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
-                  {isPremium && <span className="text-green-400 font-bold">98% Match</span>}
-                  <span>{meta}</span>
-               </div>
-            </div>
-         </div>
-      </motion.div>
-   )
-}

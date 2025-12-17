@@ -51,22 +51,108 @@ export const resumeData: ResumeData = {
     }
   ],
 
+  badges: [
+    { id: '1', name: 'Content Strategy Leader', description: '8+ years leading editorial teams', icon: '🧐', color: 'bg-blue-500' },
+    { id: '2', name: 'Growth Hacker', description: '50%+ organic traffic uplift', icon: '📈', color: 'bg-green-500' },
+    { id: '3', name: 'Quick-Win Expert', description: '7,000+ leads in <6 months', icon: '🌟', color: 'bg-yellow-500' },
+    { id: '4', name: 'SEO Architect', description: 'Hub & Spoke model specialist', icon: '🖥', color: 'bg-purple-500' },
+    { id: '5', name: 'EdTech Specialist', description: 'Deep domain expertise', icon: '📖', color: 'bg-red-500' },
+    { id: '6', name: 'AI Tool Master', description: 'Gemini, ChatGPT, Claude pro', icon: '🧰', color: 'bg-pink-500' },
+  ],
+
+  latestUpdates: [
+    { date: 'Jun 15, 2024', text: "Added 'Analytics Dashboard' case study", type: 'achievement' },
+    { date: 'May 01, 2024', text: "Completed Advanced Google Sheets Cert", type: 'skill' },
+    { date: 'Jan 10, 2024', text: "Joined InfoEdge as Asst. Manager", type: 'role' }
+  ],
+
+  emergingSkills: [
+    "AI/LLM Prompt Engineering",
+    "Advanced Google Sheets Formulas",
+    "Data Visualization (Looker Studio)",
+    "Community Building"
+  ],
+
   skillCategories: [
     {
       name: "Strategy",
-      items: ["Content Strategy", "SEO Planning", "Monetization", "Hub & Spoke Models", "Keyword Research"]
+      items: [
+        {
+          name: "Content Strategy",
+          useCase: "Aligning editorial roadmaps with commercial goals.",
+          example: "Developed the 6-month roadmap for InfoEdge Study Abroad."
+        },
+        {
+          name: "SEO Planning",
+          useCase: "Identifying high-volume, low-difficulty keyword gaps.",
+          example: "Captured 'Sarkari Naukri' traffic surge at Leverage Edu."
+        },
+        {
+          name: "Hub & Spoke Models",
+          useCase: "Building topical authority via internal linking clusters.",
+          example: "Interlinked 50+ exam pages to boost domain rating."
+        }
+      ]
     },
     {
       name: "Execution",
-      items: ["SEO Content Writing", "On-Page Optimization", "Content Updates", "Editorial Calendar"]
+      items: [
+        {
+          name: "SEO Content Writing",
+          useCase: "Creating rank-ready, high-retention articles.",
+          example: "Wrote core pages ranking #1 for BPSC Syllabus."
+        },
+        {
+          name: "On-Page Optimization",
+          useCase: "Maximizing ATF value and CTR.",
+          example: "Improved page speed & engagement metrics by 20%."
+        },
+        {
+          name: "Editorial Calendar",
+          useCase: "Managing timelines for high-volume production.",
+          example: "Coordinated daily publishing of 10+ news updates."
+        }
+      ]
     },
     {
       name: "Leadership",
-      items: ["Team Mentoring", "Workflow Optimization", "Performance Reviews", "Stakeholder Mgmt"]
+      items: [
+        {
+          name: "Team Mentoring",
+          useCase: "Improving writer throughput & quality.",
+          example: "Mentored 8-member team at Affinity Education."
+        },
+        {
+          name: "Workflow Optimization",
+          useCase: "Streamlining editorial pipelines to reduce lag.",
+          example: "Reduced publishing time by 40% using new templates."
+        },
+        {
+          name: "Stakeholder Mgmt",
+          useCase: "Aligning Product & Sales with Content.",
+          example: "Partnered with Sales to refine lead-gen forms."
+        }
+      ]
     },
     {
       name: "Analytics",
-      items: ["GA4 & GSC", "SEMrush", "Advanced Excel", "Conversion Tracking"]
+      items: [
+        {
+          name: "GA4 & GSC",
+          useCase: "Tracking user journeys & diagnosing traffic drops.",
+          example: "Identified and fixed a 15% traffic dip in Q3."
+        },
+        {
+          name: "Advanced Excel",
+          useCase: "Automating performance reports & KRA tracking.",
+          example: "Built live dashboards for daily team monitoring."
+        },
+        {
+          name: "Conversion Tracking",
+          useCase: "Measuring ROI of content pieces.",
+          example: " tracked 7,000+ leads attributed to organic posts."
+        }
+      ]
     }
   ],
 
